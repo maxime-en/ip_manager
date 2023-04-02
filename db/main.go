@@ -43,14 +43,17 @@ func (db *MySQLDatabase) Close() error {
 
 // LoadService charge les IPs, Subnets et SubnetGroups en mémoire à partir de la base de données
 func (db *MySQLDatabase) LoadService(service *types.Service) error {
-	err := db.getPrefixes(service)
-	if err != nil {
+	if err := db.createTablesIfNotExists(); err != nil {
+		return err
+	}
+
+	if err := db.getPrefixes(service); err != nil {
 		return err
 	}
 
 	// Charger les subnets et les ips pour tous les SubnetGroup
 	for _, prefix := range service.Prefixes {
-		err = db.getSubnets(prefix)
+		err := db.getSubnets(prefix)
 		if err != nil {
 			return err
 		}
@@ -66,10 +69,10 @@ func (db *MySQLDatabase) LoadService(service *types.Service) error {
 	return nil
 }
 
-// Create database structure
+// Create database structure if it does not exist, called by LoadService
 func (db *MySQLDatabase) createTablesIfNotExists() error {
 	// Create Prefixes table
-	_, err := db.Conn.Exec(`
+	if _, err := db.Conn.Exec(`
 		CREATE TABLE IF NOT EXISTS Prefixes(
 			PrefixKey VARCHAR(255) NOT NULL UNIQUE,
 			Cidr VARCHAR(255) NOT NULL UNIQUE,
@@ -77,40 +80,37 @@ func (db *MySQLDatabase) createTablesIfNotExists() error {
 			Rfc1918compliant BOOLEAN NOT NULL DEFAULT true,
 			PRIMARY KEY(PrefixKey)
 		)
-	`)
-	if err != nil {
+	`); err != nil {
 		return err
 	}
 
 	// Create Subnets table
-	_, err = db.Conn.Exec(`
+	if _, err := db.Conn.Exec(`
 		CREATE TABLE IF NOT EXISTS Subnets (
 			SubnetKey VARCHAR(255) NOT NULL UNIQUE, 
 			Cidr VARCHAR(255) NOT NULL UNIQUE, 
 			Description TEXT(1000), 
-			GroupKey VARCHAR(255) NOT NULL, 
+			PrefixKey VARCHAR(255) NOT NULL, 
 			Rfc1918compliant BOOLEAN NOT NULL DEFAULT true, 
 			PRIMARY KEY (SubnetKey), 
 			FOREIGN KEY (PrefixKey) REFERENCES Prefixes(PrefixKey) ON DELETE CASCADE
 		)
-	`)
-	if err != nil {
+	`); err != nil {
 		return err
 	}
 
 	// Create Hosts table
-	_, err = db.Conn.Exec(`
+	if _, err := db.Conn.Exec(`
 		CREATE TABLE IF NOT EXISTS Hosts (
 			HostKey VARCHAR(255) NOT NULL UNIQUE, 
 			Address VARCHAR(255) NOT NULL UNIQUE, 
 			Description TEXT(1000), 
 			SubnetKey VARCHAR(255) NOT NULL, 
 			Rfc1918compliant BOOLEAN NOT NULL DEFAULT true, 
-			PRIMARY KEY (IpKey), 
+			PRIMARY KEY (HostKey), 
 			FOREIGN KEY (SubnetKey) REFERENCES Subnets(SubnetKey) ON DELETE CASCADE
 		)
-	`)
-	if err != nil {
+	`); err != nil {
 		return err
 	}
 
