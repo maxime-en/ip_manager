@@ -8,14 +8,13 @@ import (
 )
 
 type Prefix struct {
-	Key              string             `json:"key"`
-	Cidr             *net.IPNet         `json:"-"`
-	StrCidr          string             `json:"cidr"`
-	Description      string             `json:"description"`
-	Rfc1918compliant bool               `json:"rfc1918compliant"`
-	Service          *Service           `json:"-"` // link to Service
-	Subnets          []*Subnet          `json:"-"` // link to Subnets
-	SubnetsByKey     map[string]*Subnet `json:"-"`
+	Key          string             `json:"key"`
+	Cidr         *net.IPNet         `json:"-"`
+	StrCidr      string             `json:"cidr"`
+	Description  string             `json:"description"`
+	Service      *Service           `json:"-"` // link to Service
+	Subnets      []*Subnet          `json:"-"` // link to Subnets
+	SubnetsByKey map[string]*Subnet `json:"-"`
 }
 
 const (
@@ -60,14 +59,13 @@ func NewPrefix(key string, strCidr string, service *Service, description string)
 
 	// Create fields
 	prefix := &Prefix{
-		Key:              key,
-		Cidr:             oCidr,
-		StrCidr:          strCidr,
-		Service:          service,
-		Description:      description,
-		Rfc1918compliant: ip.IsPrivate(),
-		Subnets:          make([]*Subnet, 0),
-		SubnetsByKey:     make(map[string]*Subnet),
+		Key:          key,
+		Cidr:         oCidr,
+		StrCidr:      strCidr,
+		Service:      service,
+		Description:  description,
+		Subnets:      make([]*Subnet, 0),
+		SubnetsByKey: make(map[string]*Subnet),
 	}
 
 	// Link the prefix to the service
@@ -77,13 +75,29 @@ func NewPrefix(key string, strCidr string, service *Service, description string)
 	return prefix, nil
 }
 
+// Method to call subnet generator
+func (prefix *Prefix) NewSubnet(key string, strCidr string, description string) error {
+	if _, err := NewSubnet(key, strCidr, prefix, description); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Print in json format a prefix
 func (prefix *Prefix) ToJSON() ([]byte, error) {
 	if prefix == nil {
-		return nil, fmt.Errorf("The Prefix doesn't exist, unable to print it.")
+		return nil, fmt.Errorf("The prefix doesn't exist, unable to print it.")
 	} else {
 		return json.Marshal(prefix)
 	}
+}
+
+// Evaluate if the prefix is RFC1819 compliant
+func (prefix *Prefix) IsPrivate() (bool, error) {
+	if prefix != nil {
+		return prefix.Cidr.IP.IsPrivate(), nil
+	}
+	return false, fmt.Errorf("The prefix does not exists, unable to evaluate it.")
 }
 
 // Edit an existing Prefix
@@ -120,19 +134,18 @@ func (prefix *Prefix) Modify(strCidr string, description string) error {
 	prefix.Cidr = oCidr
 	prefix.StrCidr = strCidr
 	prefix.Description = description
-	prefix.Rfc1918compliant = ip.IsPrivate()
 
 	return nil
 }
 
-// Delete an existing Prefix
+// Delete an existing prefix
 func (prefix *Prefix) Delete() error {
 	// Existence check
 	if prefix == nil {
 		return fmt.Errorf("The prefix doesn't exist, unable to delete it.")
 	}
 
-	// Delete linked Subnets
+	// Delete linked subnets
 	for _, subnet := range prefix.Subnets {
 		err := subnet.Delete()
 		if err != nil {
@@ -140,7 +153,7 @@ func (prefix *Prefix) Delete() error {
 		}
 	}
 
-	// Delete Prefix from Service
+	// Delete prefix from service
 	for i, existingPrefix := range prefix.Service.Prefixes {
 		if existingPrefix == prefix {
 			prefix.Service.Prefixes = append(prefix.Service.Prefixes[:i], prefix.Service.Prefixes[i+1:]...)

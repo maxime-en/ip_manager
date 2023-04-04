@@ -8,14 +8,13 @@ import (
 )
 
 type Subnet struct {
-	Key              string           `json:"key"`
-	Cidr             *net.IPNet       `json:"-"`
-	StrCidr          string           `json:"cidr"`
-	Description      string           `json:"description"`
-	Rfc1918compliant bool             `json:"rfc1918compliant"`
-	Prefix           *Prefix          `json:"SubnetGroup"` // link to SubnetGroup
-	Hosts            []*Host          `json:"-"`           // link to IPs
-	HostsByKey       map[string]*Host `json:"-"`
+	Key         string           `json:"key"`
+	Cidr        *net.IPNet       `json:"-"`
+	StrCidr     string           `json:"cidr"`
+	Description string           `json:"description"`
+	Prefix      *Prefix          `json:"SubnetGroup"` // link to SubnetGroup
+	Hosts       []*Host          `json:"-"`           // link to IPs
+	HostsByKey  map[string]*Host `json:"-"`
 }
 
 const (
@@ -56,7 +55,7 @@ func NewSubnet(key string, strCidr string, prefix *Prefix, description string) (
 	}
 
 	// Is CIDR unique ?
-	for _, existingSubnet := range prefix.Subnets {
+	for _, existingSubnet := range prefix.Service.Subnets {
 		if existingSubnet.Cidr.Contains(ip) {
 			return nil, fmt.Errorf("The CIDR %s is already used by subnet %s.", strCidr, existingSubnet.Key)
 		}
@@ -64,21 +63,30 @@ func NewSubnet(key string, strCidr string, prefix *Prefix, description string) (
 
 	// Create fields
 	subnet := &Subnet{
-		Key:              key,
-		Cidr:             oCidr,
-		StrCidr:          strCidr,
-		Prefix:           prefix,
-		Description:      description,
-		Rfc1918compliant: ip.IsPrivate(),
-		Hosts:            make([]*Host, 0),
-		HostsByKey:       make(map[string]*Host),
+		Key:         key,
+		Cidr:        oCidr,
+		StrCidr:     strCidr,
+		Prefix:      prefix,
+		Description: description,
+		Hosts:       make([]*Host, 0),
+		HostsByKey:  make(map[string]*Host),
 	}
 
-	// Link the subnet to the parent prefix
+	// Link the subnet to the parents prefix and service
 	prefix.Subnets = append(prefix.Subnets, subnet)
+	prefix.Service.Subnets = append(prefix.Service.Subnets, subnet)
 	prefix.SubnetsByKey[key] = subnet
+	prefix.Service.SubnetsByKey[key] = subnet
 
 	return subnet, nil
+}
+
+// Method to call host generator
+func (subnet *Subnet) NewHost(key string, strCidr string, description string) error {
+	if _, err := NewHost(key, strCidr, subnet, description); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Print in json format a subnet
@@ -88,6 +96,14 @@ func (subnet *Subnet) ToJSON() ([]byte, error) {
 	} else {
 		return json.Marshal(subnet)
 	}
+}
+
+// Evaluate if the subnet is RFC1819 compliant
+func (subnet *Subnet) IsPrivate() (bool, error) {
+	if subnet != nil {
+		return subnet.Cidr.IP.IsPrivate(), nil
+	}
+	return false, fmt.Errorf("The subnet does not exists, unable to evaluate it.")
 }
 
 // Edit an existing Subnet
@@ -129,7 +145,6 @@ func (subnet *Subnet) Modify(strCidr string, description string) error {
 	subnet.Cidr = oCidr
 	subnet.StrCidr = strCidr
 	subnet.Description = description
-	subnet.Rfc1918compliant = ip.IsPrivate()
 
 	return nil
 }
@@ -149,12 +164,20 @@ func (subnet *Subnet) Delete() error {
 		}
 	}
 
-	// Delete subnet from parent prefix
-	for i, existingSubnet := range subnet.Prefix.Subnets {
+	// Delete subnet from parent service
+	for i, existingSubnet := range subnet.Prefix.Service.Subnets {
 		if existingSubnet == subnet {
-			subnet.Prefix.Subnets = append(subnet.Prefix.Subnets[:i], subnet.Prefix.Subnets[i+1:]...)
-			delete(subnet.Prefix.SubnetsByKey, subnet.Key)
-			return nil
+			subnet.Prefix.Service.Subnets = append(subnet.Prefix.Service.Subnets[:i], subnet.Prefix.Service.Subnets[i+1:]...)
+			delete(subnet.Prefix.Service.SubnetsByKey, subnet.Key)
+
+			// Delete subnet from parent prefix
+			for i, existingSubnet := range subnet.Prefix.Subnets {
+				if existingSubnet == subnet {
+					subnet.Prefix.Subnets = append(subnet.Prefix.Subnets[:i], subnet.Prefix.Subnets[i+1:]...)
+					delete(subnet.Prefix.SubnetsByKey, subnet.Key)
+					return nil
+				}
+			}
 		}
 	}
 
