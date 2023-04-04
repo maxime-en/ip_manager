@@ -17,6 +17,9 @@ type Config struct {
 	MySQLUser     string `yaml:"mysql_user"`
 	MySQLPassword string `yaml:"mysql_password"`
 	MySQLDatabase string `yaml:"mysql_database"`
+	// API config
+	Listen           string   `yaml:"listen"`
+	AuthorizedTokens []string `yaml:"authorized_tokens"`
 }
 
 func LoadConfig() (*Config, error) {
