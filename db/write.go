@@ -5,12 +5,11 @@ import "ip_manager/types"
 // AddHost adds an host record to the SQL table
 func (db *MySQLDatabase) AddHost(host *types.Host) error {
 	_, err := db.Conn.Exec(
-		"INSERT INTO Hosts (HostKey, Address, Description, SubnetKey, Rfc1918compliant) VALUES (?, ?, ?, ?, ?)",
+		"INSERT INTO Hosts (HostKey, Address, Description, SubnetKey) VALUES (?, ?, ?, ?, ?)",
 		host.Key,
 		host.StrAddress,
 		host.Description,
 		host.Subnet.Key,
-		host.Rfc1918compliant,
 	)
 	if err != nil {
 		return err
@@ -21,10 +20,9 @@ func (db *MySQLDatabase) AddHost(host *types.Host) error {
 // UpdateHost updates a host record to the SQL table
 func (db *MySQLDatabase) UpdateHost(host *types.Host) error {
 	_, err := db.Conn.Exec(
-		"UPDATE Hosts SET Address = ? , Description = ? , Rfc1918compliant = ? WHERE HostKey = ?",
+		"UPDATE Hosts SET Address = ? , Description = ? WHERE HostKey = ?",
 		host.StrAddress,
 		host.Description,
-		host.Rfc1918compliant,
 		host.Key,
 	)
 	if err != nil {
@@ -48,12 +46,11 @@ func (db *MySQLDatabase) DeleteHost(host *types.Host) error {
 // AddSubnet adds an subnet record to the SQL table
 func (db *MySQLDatabase) AddSubnet(subnet *types.Subnet) error {
 	_, err := db.Conn.Exec(
-		"INSERT INTO Subnets (SubnetKey, Cidr, Description, PrefixKey, Rfc1918Compliant) VALUES (?, ?, ?, ?, ?)",
+		"INSERT INTO Subnets (SubnetKey, Cidr, Description, PrefixKey) VALUES (?, ?, ?, ?, ?)",
 		subnet.Key,
 		subnet.StrCidr,
 		subnet.Description,
 		subnet.Prefix.Key,
-		subnet.Rfc1918compliant,
 	)
 	if err != nil {
 		return err
@@ -64,10 +61,9 @@ func (db *MySQLDatabase) AddSubnet(subnet *types.Subnet) error {
 // UpdateSubnet updates a host record to the SQL table
 func (db *MySQLDatabase) UpdateSubnet(subnet *types.Subnet) error {
 	_, err := db.Conn.Exec(
-		"UPDATE Subnets SET Cidr = ? , Description = ? , Rfc1918compliant = ? WHERE SubnetKey = ?",
+		"UPDATE Subnets SET Cidr = ? , Description = ? WHERE SubnetKey = ?",
 		subnet.StrCidr,
 		subnet.Description,
-		subnet.Rfc1918compliant,
 		subnet.Key,
 	)
 	if err != nil {
@@ -91,11 +87,10 @@ func (db *MySQLDatabase) DeleteSubnet(subnet *types.Subnet) error {
 // AddPrefix adds an subnet record to the SQL table
 func (db *MySQLDatabase) AddPrefix(prefix *types.Prefix) error {
 	_, err := db.Conn.Exec(
-		"INSERT INTO Prefixes (PrefixKey, Cidr, Description, Rfc1918compliant) VALUES (?, ?, ?, ?)",
+		"INSERT INTO Prefixes (PrefixKey, Cidr, Description) VALUES (?, ?, ?, ?)",
 		prefix.Key,
 		prefix.StrCidr,
 		prefix.Description,
-		prefix.Rfc1918compliant,
 	)
 	if err != nil {
 		return err
@@ -106,10 +101,9 @@ func (db *MySQLDatabase) AddPrefix(prefix *types.Prefix) error {
 // UpdatePrefix updates a host record to the SQL table
 func (db *MySQLDatabase) UpdatePrefix(prefix *types.Prefix) error {
 	_, err := db.Conn.Exec(
-		"UPDATE Prefixes SET Cidr = ? , Description = ? , Rfc1918compliant = ? WHERE PrefixKey = ?",
+		"UPDATE Prefixes SET Cidr = ? , Description = ? WHERE PrefixKey = ?",
 		prefix.StrCidr,
 		prefix.Description,
-		prefix.Rfc1918compliant,
 		prefix.Key,
 	)
 	if err != nil {

@@ -77,7 +77,6 @@ func (db *MySQLDatabase) createTablesIfNotExists() error {
 			PrefixKey VARCHAR(255) NOT NULL UNIQUE,
 			Cidr VARCHAR(255) NOT NULL UNIQUE,
 			Description TEXT(1000),
-			Rfc1918compliant BOOLEAN NOT NULL DEFAULT true,
 			PRIMARY KEY(PrefixKey)
 		)
 	`); err != nil {
@@ -91,7 +90,6 @@ func (db *MySQLDatabase) createTablesIfNotExists() error {
 			Cidr VARCHAR(255) NOT NULL UNIQUE, 
 			Description TEXT(1000), 
 			PrefixKey VARCHAR(255) NOT NULL, 
-			Rfc1918compliant BOOLEAN NOT NULL DEFAULT true, 
 			PRIMARY KEY (SubnetKey), 
 			FOREIGN KEY (PrefixKey) REFERENCES Prefixes(PrefixKey) ON DELETE CASCADE
 		)
@@ -106,7 +104,6 @@ func (db *MySQLDatabase) createTablesIfNotExists() error {
 			Address VARCHAR(255) NOT NULL UNIQUE, 
 			Description TEXT(1000), 
 			SubnetKey VARCHAR(255) NOT NULL, 
-			Rfc1918compliant BOOLEAN NOT NULL DEFAULT true, 
 			PRIMARY KEY (HostKey), 
 			FOREIGN KEY (SubnetKey) REFERENCES Subnets(SubnetKey) ON DELETE CASCADE
 		)
